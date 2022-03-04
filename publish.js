@@ -17,10 +17,14 @@ client.on("connect", function () {
 });
 
 function generateData() {
+    // format time as DD.MM.YYYY HH24:MI:SS.MS
+    let date = new Date();
+    let time = date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "." + date.getMilliseconds();
+
     return {
         fin: "WVWIAmVeryRandom",
-        zeit: new Date().getTime(),
+        zeit: time,
         geschwindigkeit: Math.random() * 100,
-        ort: Math.floor(Math.random() * 100) + 1,
+        ort: Math.floor(Math.random() * 10) + 1,
     };
 }
