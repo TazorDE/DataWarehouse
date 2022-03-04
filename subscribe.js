@@ -3,10 +3,10 @@ var mqtt = require("mqtt");
 var client = mqtt.connect("mqtt://broker.hivemq.com");
 
 // set up postgres database
-// var pg = require("pg");
-// var conString = "postgres://postgres:postgres@localhost:5432/postgres";
-// var pgClient = new pg.Client(conString);
-// pgClient.connect();
+var pg = require("pg");
+var conString = "postgres://postgres:setpassword@localhost:5432/postgres";
+var pgClient = new pg.Client(conString);
+pgClient.connect();
 
 client.on("connect", function () {
     console.log("connected");
