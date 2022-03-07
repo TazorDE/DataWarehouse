@@ -24,7 +24,7 @@ function generateData() {
     return {
         fin: "WVWIAmVeryRandom",
         zeit: time,
-        geschwindigkeit: Math.random() * 100,
-        ort: Math.floor(Math.random() * 10) + 1,
+        geschwindigkeit: Math.random() * 200,
+        ort: 3,
     };
 }
