@@ -10,7 +10,7 @@ client.on("connect", function () {
     cron.schedule("*/5 * * * * *", function () {
         let data = generateData();
         console.log(data);
-        //client.publish("DataMgmt/FIN", JSON.stringify(data));
+        client.publish("DataMgmt/FIN", JSON.stringify(data));
     });
 });
 
