@@ -1,5 +1,5 @@
 Prerequesits:
-- Node.js >= 16.x [https://nodejs.org/en/download/]
+- Node.js >= v16 [https://nodejs.org/en/download/]
 
 After cloning the repository, create a file called .env with two environment variables in it.
 ```

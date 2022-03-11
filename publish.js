@@ -3,8 +3,6 @@ var mqtt = require("mqtt");
 var client = mqtt.connect("mqtt://broker.hivemq.com");
 var cron = require("node-cron");
 
-console.log(generateData());
-
 client.on("connect", function () {
     console.log("connected");
     client.subscribe("DataMgmt/FIN");
@@ -24,7 +22,7 @@ function generateData() {
     return {
         fin: "WVWIAmVeryRandom",
         zeit: time,
-        geschwindigkeit: Math.random() * 200,
+        geschwindigkeit: Math.floor(Math.random() * 200),
         ort: 3,
     };
 }
