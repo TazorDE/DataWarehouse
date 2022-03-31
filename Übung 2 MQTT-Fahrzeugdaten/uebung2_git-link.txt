@@ -1,0 +1,1 @@
+https://github.com/TazorDE/DataWarehouse/tree/main/Übung%202%20MQTT-Fahrzeugdaten
