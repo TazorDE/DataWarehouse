@@ -339,7 +339,7 @@ async function build_messung() {
         connectionTimeoutMillis: 2000,
     });
 
-    await pgPool.connect((err, client, done) => {
+    await pgPool.connect(async (err, client, done) => {
 
         // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
         let sql = `SELECT * FROM mart.d_kunde;`;
