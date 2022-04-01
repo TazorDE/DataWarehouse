@@ -224,6 +224,7 @@ async function transform(pgClient) {
     });
 
     // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
+    /*
     data.messung.forEach((msg) => {
         let payload = msg.payload;
 
@@ -276,7 +277,7 @@ async function transform(pgClient) {
         } else {
             console.error("fin is not in db: ", payload.fin);
         }
-    });
+    });*/
 
     return returnData;
 }
@@ -332,19 +333,19 @@ async function load() {
             await client.query(sql, values);
         });
 
-        martData.messung.forEach(async (res) => {
-            // insert into f_messung
-            let sql = `INSERT INTO mart.f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
-            let values = [
-                res.d_fahrzeug_id,
-                res.d_ort_id,
-                res.d_kunde_id,
-                res.messung_erzeugt,
-                res.messung_eingetroffen,
-                res.geschwindigkeit,
-            ];
-            await client.query(sql, values);
-        });
+        // martData.messung.forEach(async (res) => {
+        //     // insert into f_messung
+        //     let sql = `INSERT INTO mart.f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
+        //     let values = [
+        //         res.d_fahrzeug_id,
+        //         res.d_ort_id,
+        //         res.d_kunde_id,
+        //         res.messung_erzeugt,
+        //         res.messung_eingetroffen,
+        //         res.geschwindigkeit,
+        //     ];
+        //     await client.query(sql, values);
+        // });
     });
 
     await pgPool.end();
