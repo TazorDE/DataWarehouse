@@ -274,7 +274,7 @@ async function load() {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
-            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
             let values = [
                 res.kunde_id,
                 res.vorname,
@@ -290,14 +290,14 @@ async function load() {
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
-            let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2, $3)`;
+            let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2)`;
             let values = [res.ort, res.land];
             await client.query(sql, values);
         });
 
         martData.fahrzeug.forEach(async (res) => {
             // insert into d_fahrzeug
-            let sql = `INSERT INTO mart.d_fahrzeug (fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
+            let sql = `INSERT INTO mart.d_fahrzeug (fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5)`;
             let values = [
                 res.fin,
                 res.baujahr,
