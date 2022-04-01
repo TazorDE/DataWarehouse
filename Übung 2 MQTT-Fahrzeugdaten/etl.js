@@ -147,6 +147,7 @@ async function transform(pgClient) {
             anrede: res.anrede,
             geschlecht: res.geschlecht,
             geburtsdatum: res.geburtsdatum,
+            wohnort_id: tempOrt.ort_id,
             ort: tempOrt.ort,
             land: tempLand.land,
         });
@@ -274,7 +275,7 @@ async function load() {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
-            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`;
+            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, wohnort_id, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
             let values = [
                 res.kunde_id,
                 res.vorname,
@@ -282,6 +283,7 @@ async function load() {
                 res.anrede,
                 res.geschlecht,
                 res.geburtsdatum,
+                res.wohnort_id,
                 res.ort,
                 res.land,
             ];
