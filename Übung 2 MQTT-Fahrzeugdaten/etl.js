@@ -343,11 +343,11 @@ async function build_messung() {
 
         // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
         let sql = `SELECT * FROM mart.d_kunde;`;
-        let currentKunden = await pgPool.query(sql);
+        let currentKunden = await client.query(sql);
         sql = `SELECT * FROM mart.d_ort;`;
-        let currentOrte = await pgPool.query(sql);
+        let currentOrte = await client.query(sql);
         sql = `SELECT * FROM mart.d_fahrzeug;`;
-        let currentFahrzeuge = await pgPool.query(sql);
+        let currentFahrzeuge = await client.query(sql);
 
         console.log(currentKunden.rows);
         done();
