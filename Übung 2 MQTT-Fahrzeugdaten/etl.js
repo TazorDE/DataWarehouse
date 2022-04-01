@@ -339,15 +339,19 @@ async function build_messung() {
         connectionTimeoutMillis: 2000,
     });
 
-    // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
-    let sql = `SELECT * FROM mart.d_kunde;`;
-    let currentKunden = await pgPool.query(sql);
-    sql = `SELECT * FROM mart.d_ort;`;
-    let currentOrte = await pgPool.query(sql);
-    sql = `SELECT * FROM mart.d_fahrzeug;`;
-    let currentFahrzeuge = await pgPool.query(sql);
+    await pgPool.connect((err, client, done) => {
 
-    console.log(currentKunden.rows);
+        // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
+        let sql = `SELECT * FROM mart.d_kunde;`;
+        let currentKunden = await pgPool.query(sql);
+        sql = `SELECT * FROM mart.d_ort;`;
+        let currentOrte = await pgPool.query(sql);
+        sql = `SELECT * FROM mart.d_fahrzeug;`;
+        let currentFahrzeuge = await pgPool.query(sql);
+
+        console.log(currentKunden.rows);
+        done();
+    });
 
     await pgPool.end();
 }
