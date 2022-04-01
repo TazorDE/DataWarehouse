@@ -1,8 +1,11 @@
 const dotenv = require("dotenv");
 dotenv.config();
 
+const moment = require("moment");
+
 // set up postgres database
 const { Client, Pool } = require("pg");
+const pg = require("pg");
 
 if (!String.prototype.trim) {
     String.prototype.trim = function () {
@@ -224,7 +227,7 @@ async function transform(pgClient) {
                     geschwindigkeit: payload.geschwindigkeit,
                     fin: payload.fin,
                     kunde_id: tempFahrzeug.kunde_id,
-                    ort_id: payload.ort
+                    ort_id: tempOrt.ort
                 });
             } else {
                 console.error(
@@ -240,18 +243,25 @@ async function transform(pgClient) {
     return returnData;
 }
 async function load() {
-    const pgPool = new Pool({
-        host: "localhost",
-        user: dbUser,
-        password: dbPassword,
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
+
+    let client = new Client(conString);
+    client.connect(err => {
+        if (err) {
+            console.error('connection error', err.stack)
+        } else {
+            console.log('connected')
+        }
     });
 
-    let martData = await transform();
+    let martData = await transform(client);
 
-    const client = await pgPool.connect();
+    await client.query(`TRUNCATE TABLE mart.d_kunde`);
+    await client.query(`TRUNCATE TABLE mart.d_ort`);
+    await client.query(`TRUNCATE TABLE mart.d_fahrzeug`);
+    await client.query(`TRUNCATE TABLE mart.f_fzg_messung`);
+
+
+
     martData.kunde.forEach(async (res) => {
         // insert into d_kunde
         let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, wohnort_id, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
@@ -266,8 +276,8 @@ async function load() {
             res.ort,
             res.land,
         ];
-
-        await client.query(sql, values);
+        let kunderes = await client.query(sql, values);
+        // console.log('kunde', kunderes);
     });
 
     martData.ort.forEach(async (res) => {
@@ -277,7 +287,8 @@ async function load() {
             res.ort,
             res.land
         ];
-        await client.query(sql, values);
+        let ortres = await client.query(sql, values);
+        // console.log('ort', ortres);
     });
 
     martData.fahrzeug.forEach(async (res) => {
@@ -290,75 +301,76 @@ async function load() {
             res.kfz_kennzeichen,
             res.hersteller,
         ];
-        await client.query(sql, values);
+        let fahrzeugres = await client.query(sql, values);
+        // console.log('fahrzeug', fahrzeugres);
     });
 
-    martData.messung.forEach((res) => {
+    // get curr data
+    let sql = `SELECT * FROM mart.d_kunde`;
+    let kundeRes = await client.query(sql);
+    //console.log(kundeRes.rows);
 
-        let sql = `SELECT * FROM mart.d_kunde;`;
-        let values = [];
-        client.query(sql, values).then((res) => {
-            console.log("sql output: ",res.rows);
-        });
+    sql = `SELECT * FROM mart.d_ort`;
+    let ortRes = await client.query(sql);
+    //console.log(ortRes.rows);
+
+    sql = `SELECT * FROM mart.d_fahrzeug`;
+    let fahrzeugRes = await client.query(sql);
+    //console.log(fahrzeugRes.rows);
+
+    martData.messung.forEach(async (res) => {
+
+        /**
+         {
+            messung_erzeugt: '31.03.2022 11:05:20.488',
+            messung_eingetroffen: 2022-03-31T09:05:20.483Z,
+            geschwindigkeit: 130,
+            fin: 'WVWIAmVeryRandom',
+            kunde_id: 532985,
+            ort_id: 3
+          }
+         */
+
+        // get d_fahrzeug_id from fin
+        let tempFahrzeug = fahrzeugRes.rows.find(
+            (element) => element.fin.trim() == res.fin.trim()
+        );
+
+        // get d_ort_id from ort_id
+        let tempOrt = ortRes.rows.find(
+            (element) => element.ort == res.ort_id
+        );
+
+        // get d_kunde_id from kunde_id
+        let tempKunde = kundeRes.rows.find(
+            (element) => element.kunde_id == res.kunde_id
+        );
 
 
-        sql = `INSERT INTO mart.f_fzg_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
-
+        sql = `INSERT INTO mart.f_fzg_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, empfang_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
         values = [
-            res.d_fahrzeug_id,
-            res.d_ort_id,
-            res.d_kunde_id,
-            res.messung_erzeugt,
-            res.messung_eingetroffen,
-            res.geschwindigkeit,
+            Number.parseInt(tempFahrzeug.d_fahrzeug_id),
+            Number.parseInt(tempOrt.d_ort_id),
+            Number.parseInt(tempKunde.d_kunde_id),
+            Date.parse(moment(res.messung_erzeugt, 'DD.MM.YYYY HH:mm:ss.SSS').toLocaleString()),
+            Date.parse(moment(res.messung_eingetroffen, 'DD.MM.YYYY HH:mm:ss.SSS').toLocaleString()),
+            Number.parseInt(res.geschwindigkeit),
         ];
-        //await client.query(sql, values);
 
-    });
-
-    console.log("Mart data uploaded");
-    pgPool.end().then(console.log('pool has ended'));
-}
-
-async function getCurrentData() {
-    let pgClient = new Client(conString);
-    await pgClient.connect();
-
-    let sql = `SELECT * FROM mart.d_kunde;`;
-    let currentKunden;
-    await pgClient.query(sql, [], (error, result) => {
-        currentKunden = result.rows;
-        if (error) {
-            console.error(error.stack);
+        if (values[3].isNan() || values[4].isNan()) {
+            console.error('invalid date: ', res.messung_eingetroffen);
+        } else {
+            console.log('inserting: ', values);
+            //console.log('now', await client.query('SELECT timeofday()'));
+            try {
+                await client.query(sql, values);
+            } catch (error) {
+                console.error('error: ', error);
+            }
         }
     });
-    sql = `SELECT * FROM mart.d_ort;`;
-    let currentOrte;
-    await pgClient.query(sql, [], (error, result) => {
-        currentOrte = result.rows;
-        if (error) {
-            console.error(error.stack);
-        }
-    });
-    sql = `SELECT * FROM mart.d_fahrzeug;`;
-    let currentFahrzeuge;
-    await pgClient.query(sql, [], (error, result) => {
-        currentFahrzeuge = result.rows;
-        if (error) {
-            console.error(error.stack);
-        }
-    });
-
-    await pgClient.end();
-    return {
-        kunde: await currentKunden,
-        ort: await currentOrte,
-        fahrzeug: await currentFahrzeuge,
-    };
 }
 
-async function startSys() {
-    await load();
-    process.exit(1)
-}
-startSys();
+load().then(() => {
+    process.exit(1);
+});
