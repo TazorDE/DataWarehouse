@@ -287,14 +287,17 @@ async function load() {
                 res.ort,
                 res.land,
             ];
-            await client.query(sql, values);
+            let queryRes = await client.query(sql, values);
+            console.log('kunde', queryRes);
+
         });
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
             let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2)`;
             let values = [res.ort, res.land];
-            await client.query(sql, values);
+            let queryRes = await client.query(sql, values);
+            console.log('ort: ',queryRes);
         });
 
         martData.fahrzeug.forEach(async (res) => {
@@ -307,12 +310,14 @@ async function load() {
                 res.kfz_kennzeichen,
                 res.hersteller,
             ];
-            await client.query(sql, values);
+            let queryRes = await client.query(sql, values);
+            console.log('fahrzeug: ',queryRes);
+
         });
 
         // martData.messung.forEach(async (res) => {
         //     // insert into f_messung
-        //     let sql = `INSERT INTO mart.f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
+        //     let sql = `INSERT INTO mart.f_fzg_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
         //     let values = [
         //         res.d_fahrzeug_id,
         //         res.d_ort_id,
