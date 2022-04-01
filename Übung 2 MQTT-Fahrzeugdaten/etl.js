@@ -202,7 +202,6 @@ async function transform(pgClient) {
     });
 
     // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
-    /*
     data.messung.forEach((msg) => {
         let payload = msg.payload;
 
@@ -212,50 +211,31 @@ async function transform(pgClient) {
         );
 
         if (tempFahrzeug != undefined) {
-            // get d_fahrzeug_id
-            let tempDFahrzeug = returnData.fahrzeug.find(
-                (element) => element.fin.trim() == payload.fin.trim()
-            );
-
             // get d_ort_id from ort_id
             let tempOrt = data.ort.find(
                 (element) => element.ort_id == payload.ort
             );
 
             if (tempOrt != undefined) {
-                // get d_ort_id from tempOrt.ort
-                let tempDOrt = returnData.ort.find(
-                    (element) => element.ort == tempOrt.ort
-                );
-
-                // get d_kunde_id from tempFahrzeug.kunde_id
-                let tempDKunde = returnData.kunde.find(
-                    (element) => element.kunde_id == tempFahrzeug.kunde_id
-                );
-
-                if (tempDKunde != undefined) {
-                    // push to array
-                    returnData.messung.push({
-                        d_fahrzeug_id: tempDFahrzeug.d_fahrzeug_id,
-                        d_ort_id: tempDOrt.d_ort_id,
-                        d_kunde_id: tempDKunde.d_kunde_id,
-                        messung_erzeugt: payload.zeit,
-                        messung_eingetroffen: msg.erstellt_am,
-                        geschwindigkeit: payload.geschwindigkeit,
-                    });
-                } else {
-                    console.error(
-                        "kunde_id is not in db: ",
-                        tempFahrzeug.kunde_id
-                    );
-                }
+                // push to array
+                returnData.messung.push({
+                    messung_erzeugt: payload.zeit,
+                    messung_eingetroffen: msg.erstellt_am,
+                    geschwindigkeit: payload.geschwindigkeit,
+                    fin: payload.fin,
+                    kunde_id: tempFahrzeug.kunde_id,
+                    ort_id: payload.ort
+                });
             } else {
-                console.error("ort_id is not in db: ", payload.ort);
+                console.error(
+                    "kunde_id is not in db: ",
+                    tempFahrzeug.kunde_id
+                );
             }
         } else {
             console.error("fin is not in db: ", payload.fin);
         }
-    });*/
+    });
 
     return returnData;
 }
@@ -271,36 +251,38 @@ async function load() {
 
     let martData = await transform();
 
+    const client = await pgPool.connect();
+    martData.kunde.forEach(async (res) => {
+        console.log('here')
+        // insert into d_kunde
+        let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, wohnort_id, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+        let values = [
+            res.kunde_id,
+            res.vorname,
+            res.nachname,
+            res.anrede,
+            res.geschlecht,
+            res.geburtsdatum,
+            res.wohnort_id,
+            res.ort,
+            res.land,
+        ];
+
+
+
+    });
+
+
     pgPool.connect(async (err, client, done) => {
+
         // Neue Daten in Mart laden
-        martData.kunde.forEach(async (res) => {
-            // insert into d_kunde
-            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, wohnort_id, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
-            let values = [
-                res.kunde_id,
-                res.vorname,
-                res.nachname,
-                res.anrede,
-                res.geschlecht,
-                res.geburtsdatum,
-                res.wohnort_id,
-                res.ort,
-                res.land,
-            ];
-            await client.query(sql, values, (error, result) => {
-                client.release();
-                if (error) {
-                    console.error(error.stack);
-                }
-            });
-        });
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
             let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2)`;
             let values = [res.ort, res.land];
             await client.query(sql, values, (error, result) => {
-                client.release();
+                console.log(result);
                 if (error) {
                     console.error(error.stack);
                 }
@@ -318,59 +300,79 @@ async function load() {
                 res.hersteller,
             ];
             await client.query(sql, values, (error, result) => {
-                client.release();
+                console.log(result);
                 if (error) {
                     console.error(error.stack);
                 }
             });
         });
 
-        // martData.messung.forEach(async (res) => {
-        //     // insert into f_messung
-        //     let sql = `INSERT INTO mart.f_fzg_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
-        //     let values = [
-        //         res.d_fahrzeug_id,
-        //         res.d_ort_id,
-        //         res.d_kunde_id,
-        //         res.messung_erzeugt,
-        //         res.messung_eingetroffen,
-        //         res.geschwindigkeit,
-        //     ];
-        //     await client.query(sql, values);
-        // });
-        // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
-        let sql = `SELECT * FROM mart.d_kunde;`;
-        let currentKunden = await client.query(sql,[], (error, result) => {
-            client.release();
-            if (error) {
-                console.error(error.stack);
-            }
-        });
-        sql = `SELECT * FROM mart.d_ort;`;
-        let currentOrte = await client.query(sql,[], (error, result) => {
-            client.release();
-            if (error) {
-                console.error(error.stack);
-            }
-        });
-        sql = `SELECT * FROM mart.d_fahrzeug;`;
-        let currentFahrzeuge = await client.query(sql,[], (error, result) => {
-            client.release();
-            if (error) {
-                console.error(error.stack);
-            }
-        });
+        // getCurrentData();
 
-        console.log(currentKunden.rows);
+        // Create Messung entry
 
+        martData.messung.forEach(res => {
+
+            console.log(res);
+
+            let sql = `INSERT INTO mart.f_fzg_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
+
+            let values = [
+                res.d_fahrzeug_id,
+                res.d_ort_id,
+                res.d_kunde_id,
+                res.messung_erzeugt,
+                res.messung_eingetroffen,
+                res.geschwindigkeit,
+            ];
+            //await client.query(sql, values);
+
+        });
     });
+
     console.log("Mart data uploaded");
-    await pgPool.end();
+    pgPool.end().then(console.log('pool has ended'));
+}
+
+async function getCurrentData() {
+    let pgClient = new Client(constring);
+    await pgClient.connect();
+
+    let sql = `SELECT * FROM mart.d_kunde;`;
+    let currentKunden;
+    await pgClient.query(sql, [], (error, result) => {
+        currentKunden = result.rows;
+        if (error) {
+            console.error(error.stack);
+        }
+    });
+    sql = `SELECT * FROM mart.d_ort;`;
+    let currentOrte;
+    await pgClient.query(sql, [], (error, result) => {
+        currentOrte = result.rows;
+        if (error) {
+            console.error(error.stack);
+        }
+    });
+    sql = `SELECT * FROM mart.d_fahrzeug;`;
+    let currentFahrzeuge;
+    await pgClient.query(sql, [], (error, result) => {
+        currentFahrzeuge = result.rows;
+        if (error) {
+            console.error(error.stack);
+        }
+    });
+
+    await pgClient.end();
+    return {
+        kunde: currentKunden,
+        ort: currentOrte,
+        fahrzeug: currentFahrzeuge,
+    };
 }
 
 async function startSys() {
     await load();
-
-    build_messung();
+    process.exit(1)
 }
 startSys();
