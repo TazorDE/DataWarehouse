@@ -9,8 +9,33 @@ let dbUser = process.env.DB_USER;
 let dbPassword = process.env.DB_PASSWORD;
 const conString = `postgres://${dbUser}:${dbPassword}@localhost:5432/postgres`;
 
+
+let d_kunde_id_start;
+let d_ort_id_start;
+let d_fahrzeug_id_start;
+
 // Tables in staging: messung, land, ort, kfzzuordnung, kunde, fahrzeug, hersteller
 // Tables in mart: d_kunde, f_fzg_messung, d_fahrzeug, d_ort
+
+async function generateStartValues() {
+    // create d/f_id start values
+    let d_kunde_id_start = 0;
+    let d_ort_id_start = 0;
+    let d_fahrzeug_id_start = 0;
+
+    // check entries for existing ids and load the highest id+1 as a new start value
+    let client = new Client(conString);
+    client.connect();
+
+
+
+    await client.end();
+    return {
+        d_kunde_id_start,
+        d_ort_id_start,
+        d_fahrzeug_id_start
+    }
+}
 
 // extract data from staging
 async function extract() {
@@ -111,117 +136,101 @@ async function transform() {
     // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit
 
     // Daten in neue Struktur für Mart bringen
-    let martKundeStruktur = {
-        kunde_id: '',
-        vorname: '',
-        nachname: '',
-        anrede: '',
-        geschlecht: '',
-        geburtsdatum: '',
-        ort: '',
-        land: ''
-    };
-    let martOrtStruktur = {
-        ort: '',
-        land: ''
-    }
-
-    let martFahrzeugStruktur = {
-        fin: '',
-        baujahr: '',
-        modell: '',
-        kfz_kennzeichen: '',
-        hersteller: ''
-    }
-
-    let martMessungStruktur = {
-        fahrzeug_id: '',
-        ort: '',
-        kunde: '',
-        messung_erzeugt: '',
-        messung_eingetroffen: '',
-        geschwindigkeit: ''
-    }
-
     let kundenArray = [];
     let ortArray = [];
     let fahrzeugArray = [];
     let messungArray = [];
 
-    // d_kunde: kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land
+    let returnData = {
+        kunde: kundenArray,
+        ort: ortArray,
+        fahrzeug: fahrzeugArray,
+        messung: messungArray
+    }
+
+    // d_kunde: d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land
     data.kunde.forEach(res => {
-        let tempKunde = martKundeStruktur;
-
-        tempKunde.kunde_id = res.kunde_id;
-        tempKunde.vorname = res.vorname;
-        tempKunde.nachname = res.nachname;
-        tempKunde.anrede = res.anrede;
-        tempKunde.geschlecht = res.geschlecht;
-        tempKunde.geburtsdatum = res.geburtsdatum;
-
         wohnort = res.wohnort;
-
         // get name of wohnort_id
         let tempOrt = data.ort.find(element => element.ort_id == wohnort);
-        tempKunde.ort = tempOrt.ort;
 
         let land = tempOrt.land_id;
         // get name of land_id
         let tempLand = data.land.find(element => element.land_id == land);
-        tempKunde.land = tempLand.land;
 
-        // push to array
-        kundenArray.push(tempKunde);
+        // add tempkunde to returnData.kunde
+        returnData.kunde.push({
+            d_kunde_id: d_kunde_id_start,
+            kunde_id: res.kunde_id,
+            vorname: res.vorname,
+            nachname: res.nachname,
+            anrede: res.anrede,
+            geschlecht: res.geschlecht,
+            geburtsdatum: res.geburtsdatum,
+            ort: tempOrt.ort,
+            land: tempLand.land
+        });
+        d_kunde_id_start++;
     });
 
-    // d_ort: ort, land
+    // d_ort: d_ort_id, ort, land
     data.ort.forEach(res => {
-        let tempOrt = martOrtStruktur;
-        tempOrt.ort = res.ort;
-
         // get land from land_id
         let tempLand = data.land.find(element => element.land_id == res.land_id);
 
         if (tempLand != undefined) {
-            tempOrt.land = tempLand.land;
-
             // push to array
-            ortArray.push(tempOrt);
+            returnData.ort.push({
+                d_ort_id: d_ort_id_start,
+                ort: res.ort,
+                land: tempLand.land
+            });
+            d_ort_id_start++;
         } else {
             console.error('land_id is not correctly defined: ', res.ort, res.land_id);
         }
     });
 
-    // d_fahrzeug: fin, baujahr, modell, kfz_kennzeichen, hersteller
+    // d_fahrzeug: d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller
     data.fahrzeug.forEach(res => {
-        let tempFahrzeug = martFahrzeugStruktur;
-
-        tempFahrzeug.fin = res.fin;
-        tempFahrzeug.baujahr = res.baujahr;
-        tempFahrzeug.modell = res.modell;
-
         // get hersteller from hersteller_code
         let tempHersteller = data.hersteller.find(element => element.hersteller_code == res.hersteller_code);
-        tempFahrzeug.hersteller = tempHersteller.hersteller;
 
         // get kennzeichen from kfzzuordnung
         let tempKennzeichen = data.kfzzuordnung.find(element => element.fin == res.fin);
-        tempFahrzeug.kfz_kennzeichen = tempKennzeichen.kfz_kennzeichen;
 
         // push to array
-        fahrzeugArray.push(tempFahrzeug);
+        returnData.fahrzeug.push({
+            d_fahrzeug_id: d_fahrzeug_id_start,
+            fin: res.fin,
+            baujahr: res.baujahr,
+            modell: res.modell,
+            hersteller: tempHersteller.hersteller,
+            kfz_kennzeichen: tempKennzeichen.kfz_kennzeichen
+        });
+        d_fahrzeug_id_start++;
     });
 
-    console.log(kundenArray, ortArray, fahrzeugArray);
-    return {
-        kundenArray,
-        ortArray,
-        fahrzeugArray
-    }
+    // f_messung: fahrzeug_id, ort_id, kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
+    data.messung.forEach(msg => console.log(msg))
+
+    return returnData;
+
 }
 async function load() {
     let martData = await transform();
+    //console.log(martData)
     // Neue Daten in Mart laden
-
 }
-load();
+
+async function startSys() {
+
+    let startValues = await generateStartValues();
+    d_kunde_id_start = startValues.d_kunde_id_start;
+    d_ort_id_start = startValues.d_ort_id_start;
+    d_fahrzeug_id_start = startValues.d_fahrzeug_id_start;
+
+
+    load();
+}
+startSys();
