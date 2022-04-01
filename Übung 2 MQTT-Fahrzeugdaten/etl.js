@@ -9,7 +9,6 @@ let dbUser = process.env.DB_USER;
 let dbPassword = process.env.DB_PASSWORD;
 const conString = `postgres://${dbUser}:${dbPassword}@localhost:5432/postgres`;
 
-
 let d_kunde_id_start;
 let d_ort_id_start;
 let d_fahrzeug_id_start;
@@ -27,19 +26,16 @@ async function generateStartValues() {
     let client = new Client(conString);
     client.connect();
 
-
-
     await client.end();
     return {
         d_kunde_id_start,
         d_ort_id_start,
-        d_fahrzeug_id_start
-    }
+        d_fahrzeug_id_start,
+    };
 }
 
 // extract data from staging
 async function extract() {
-
     let pgClient = new Client(conString);
     pgClient.connect();
 
@@ -47,7 +43,8 @@ async function extract() {
     let messung = await pgClient.query(`
         SELECT
             messung_id,
-            payload
+            payload,
+            erstellt_am
         FROM
             staging.messung
         WHERE
@@ -125,7 +122,7 @@ async function extract() {
         kfzzuordnung: kfzzuordnung.rows,
         kunde: kunde.rows,
         fahrzeug: fahrzeug.rows,
-        hersteller: hersteller.rows
+        hersteller: hersteller.rows,
     };
 }
 
@@ -145,18 +142,18 @@ async function transform() {
         kunde: kundenArray,
         ort: ortArray,
         fahrzeug: fahrzeugArray,
-        messung: messungArray
-    }
+        messung: messungArray,
+    };
 
     // d_kunde: d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land
-    data.kunde.forEach(res => {
+    data.kunde.forEach((res) => {
         wohnort = res.wohnort;
         // get name of wohnort_id
-        let tempOrt = data.ort.find(element => element.ort_id == wohnort);
+        let tempOrt = data.ort.find((element) => element.ort_id == wohnort);
 
         let land = tempOrt.land_id;
         // get name of land_id
-        let tempLand = data.land.find(element => element.land_id == land);
+        let tempLand = data.land.find((element) => element.land_id == land);
 
         // add tempkunde to returnData.kunde
         returnData.kunde.push({
@@ -168,36 +165,46 @@ async function transform() {
             geschlecht: res.geschlecht,
             geburtsdatum: res.geburtsdatum,
             ort: tempOrt.ort,
-            land: tempLand.land
+            land: tempLand.land,
         });
         d_kunde_id_start++;
     });
 
     // d_ort: d_ort_id, ort, land
-    data.ort.forEach(res => {
+    data.ort.forEach((res) => {
         // get land from land_id
-        let tempLand = data.land.find(element => element.land_id == res.land_id);
+        let tempLand = data.land.find(
+            (element) => element.land_id == res.land_id
+        );
 
         if (tempLand != undefined) {
             // push to array
             returnData.ort.push({
                 d_ort_id: d_ort_id_start,
                 ort: res.ort,
-                land: tempLand.land
+                land: tempLand.land,
             });
             d_ort_id_start++;
         } else {
-            console.error('land_id is not correctly defined: ', res.ort, res.land_id);
+            console.error(
+                "land_id is not correctly defined: ",
+                res.ort,
+                res.land_id
+            );
         }
     });
 
     // d_fahrzeug: d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller
-    data.fahrzeug.forEach(res => {
+    data.fahrzeug.forEach((res) => {
         // get hersteller from hersteller_code
-        let tempHersteller = data.hersteller.find(element => element.hersteller_code == res.hersteller_code);
+        let tempHersteller = data.hersteller.find(
+            (element) => element.hersteller_code == res.hersteller_code
+        );
 
         // get kennzeichen from kfzzuordnung
-        let tempKennzeichen = data.kfzzuordnung.find(element => element.fin == res.fin);
+        let tempKennzeichen = data.kfzzuordnung.find(
+            (element) => element.fin == res.fin
+        );
 
         // push to array
         returnData.fahrzeug.push({
@@ -206,30 +213,73 @@ async function transform() {
             baujahr: res.baujahr,
             modell: res.modell,
             hersteller: tempHersteller.hersteller,
-            kfz_kennzeichen: tempKennzeichen.kfz_kennzeichen
+            kfz_kennzeichen: tempKennzeichen.kfz_kennzeichen,
         });
         d_fahrzeug_id_start++;
     });
 
-    // f_messung: fahrzeug_id, ort_id, kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
-    data.messung.forEach(msg => console.log(msg))
+    // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
+    data.messung.forEach((msg) => {
+        let fin = msg.payload.fin;
+
+        let tempFahrzeug = data.fahrzeug.find((element) => element.fin == fin);
+        if (tempFahrzeug != undefined) {
+            let tempDFahrzeug = returnData.fahrzeug.find(
+                (element) => element.fin == fin
+            );
+
+            // get kunde from returnData.kunde where kunde_id == tempFahrzeug.kunde_id
+            let tempKunde = returnData.kunde.find(
+                (element) => element.kunde_id == tempFahrzeug.kunde_id
+            );
+
+            if (tempKunde != undefined) {
+                let messungOrt = msg.payload.ort;
+                // get ort from data.ort where ort_id == messungOrt
+                let tempOrt = data.ort.find(
+                    (element) => element.ort_id == messungOrt
+                );
+
+                if (tempOrt != undefined) {
+                    // get d_ort_id from returnData.ort where ort == tempOrt.ort
+                    let tempDOrt = returnData.ort.find(
+                        (element) => element.ort == tempOrt.ort
+                    );
+
+                    // push to array
+                    returnData.messung.push({
+                        d_fahrzeug_id: tempDFahrzeug.d_fahrzeug_id,
+                        d_ort_id: tempDOrt.d_ort_id,
+                        d_kunde_id: tempKunde.d_kunde_id,
+                        messung_erzeugt: new Date(msg.payload.zeit),
+                        messung_eingetroffen: new Date(msg.erstellt_am),
+                        geschwindigkeit: msg.payload.geschwindigkeit,
+                    });
+
+                } else {
+                    console.error("ort_id is not in db: ", messungOrt);
+                }
+            } else {
+                console.error("kunde_id is not in db: ", tempFahrzeug.kunde_id);
+            }
+        } else {
+            console.error("fin is not in db: ", fin);
+        }
+    });
 
     return returnData;
-
 }
 async function load() {
     let martData = await transform();
-    //console.log(martData)
+    console.log(martData);
     // Neue Daten in Mart laden
 }
 
 async function startSys() {
-
     let startValues = await generateStartValues();
     d_kunde_id_start = startValues.d_kunde_id_start;
     d_ort_id_start = startValues.d_ort_id_start;
     d_fahrzeug_id_start = startValues.d_fahrzeug_id_start;
-
 
     load();
 }
