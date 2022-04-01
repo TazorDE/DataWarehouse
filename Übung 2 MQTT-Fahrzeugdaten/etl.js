@@ -323,9 +323,9 @@ async function load() {
         //     ];
         //     await client.query(sql, values);
         // });
-        done();
+        client.release();
     });
-
+    console.log("Mart data uploaded");
     await pgPool.end();
 }
 
@@ -358,5 +358,7 @@ async function build_messung() {
 
 async function startSys() {
     await load();
+
+    build_messung();
 }
 startSys();
