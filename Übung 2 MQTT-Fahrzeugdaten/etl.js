@@ -141,7 +141,6 @@ async function transform(pgClient) {
 
         // add tempkunde to returnData.kunde
         returnData.kunde.push({
-            d_kunde_id: d_kunde_id_start,
             kunde_id: res.kunde_id,
             vorname: res.vorname,
             nachname: res.nachname,
@@ -151,7 +150,6 @@ async function transform(pgClient) {
             ort: tempOrt.ort,
             land: tempLand.land,
         });
-        d_kunde_id_start++;
     });
 
     // d_ort: d_ort_id, ort, land
@@ -164,11 +162,9 @@ async function transform(pgClient) {
         if (tempLand != undefined) {
             // push to array
             returnData.ort.push({
-                d_ort_id: d_ort_id_start,
                 ort: res.ort,
                 land: tempLand.land,
             });
-            d_ort_id_start++;
         } else {
             console.error(
                 "land_id is not correctly defined: ",
@@ -196,14 +192,12 @@ async function transform(pgClient) {
 
         // push to array
         returnData.fahrzeug.push({
-            d_fahrzeug_id: d_fahrzeug_id_start,
             fin: fin,
             baujahr: res.baujahr,
             modell: res.modell,
             hersteller: tempHersteller.hersteller,
             kfz_kennzeichen: tempKennzeichen.kfz_kennzeichen,
         });
-        d_fahrzeug_id_start++;
     });
 
     // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
