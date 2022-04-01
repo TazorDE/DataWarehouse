@@ -4,6 +4,12 @@ dotenv.config();
 // set up postgres database
 const { Client } = require("pg");
 
+if (!String.prototype.trim) {
+    String.prototype.trim = function () {
+        return this.replace(/^\s+|\s+$/g, "");
+    };
+}
+
 // connection string with environment variables
 let dbUser = process.env.DB_USER;
 let dbPassword = process.env.DB_PASSWORD;
@@ -196,6 +202,10 @@ async function transform() {
 
     // d_fahrzeug: d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller
     data.fahrzeug.forEach((res) => {
+        // trim fin
+        let fin = res.fin.trim();
+        res.fin = fin;
+
         // get hersteller from hersteller_code
         let tempHersteller = data.hersteller.find(
             (element) => element.hersteller_code == res.hersteller_code
@@ -203,13 +213,13 @@ async function transform() {
 
         // get kennzeichen from kfzzuordnung
         let tempKennzeichen = data.kfzzuordnung.find(
-            (element) => element.fin == res.fin
+            (element) => element.fin.trim() == res.fin.trim()
         );
 
         // push to array
         returnData.fahrzeug.push({
             d_fahrzeug_id: d_fahrzeug_id_start,
-            fin: res.fin,
+            fin: fin,
             baujahr: res.baujahr,
             modell: res.modell,
             hersteller: tempHersteller.hersteller,
@@ -220,50 +230,56 @@ async function transform() {
 
     // f_messung: d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetrofen, geschwindigkeit
     data.messung.forEach((msg) => {
-        let fin = msg.payload.fin;
+        let payload = msg.payload;
 
-        let tempFahrzeug = data.fahrzeug.find((element) => element.fin == fin);
+        // get d_fahrzeug_id from fin
+        let tempFahrzeug = data.fahrzeug.find(
+            (element) => element.fin == payload.fin
+        );
+
         if (tempFahrzeug != undefined) {
+            // get d_fahrzeug_id
             let tempDFahrzeug = returnData.fahrzeug.find(
-                (element) => element.fin == fin
+                (element) => element.fin.trim() == payload.fin.trim()
             );
 
-            // get kunde from returnData.kunde where kunde_id == tempFahrzeug.kunde_id
-            let tempKunde = returnData.kunde.find(
-                (element) => element.kunde_id == tempFahrzeug.kunde_id
+            // get d_ort_id from ort_id
+            let tempOrt = data.ort.find(
+                (element) => element.ort_id == payload.ort
             );
 
-            if (tempKunde != undefined) {
-                let messungOrt = msg.payload.ort;
-                // get ort from data.ort where ort_id == messungOrt
-                let tempOrt = data.ort.find(
-                    (element) => element.ort_id == messungOrt
+            if (tempOrt != undefined) {
+                // get d_ort_id from tempOrt.ort
+                let tempDOrt = returnData.ort.find(
+                    (element) => element.ort == tempOrt.ort
                 );
 
-                if (tempOrt != undefined) {
-                    // get d_ort_id from returnData.ort where ort == tempOrt.ort
-                    let tempDOrt = returnData.ort.find(
-                        (element) => element.ort == tempOrt.ort
-                    );
+                // get d_kunde_id from tempFahrzeug.kunde_id
+                let tempDKunde = returnData.kunde.find(
+                    (element) => element.kunde_id == tempFahrzeug.kunde_id
+                );
 
+                if (tempDKunde != undefined) {
                     // push to array
                     returnData.messung.push({
                         d_fahrzeug_id: tempDFahrzeug.d_fahrzeug_id,
                         d_ort_id: tempDOrt.d_ort_id,
-                        d_kunde_id: tempKunde.d_kunde_id,
-                        messung_erzeugt: new Date(msg.payload.zeit),
-                        messung_eingetroffen: new Date(msg.erstellt_am),
-                        geschwindigkeit: msg.payload.geschwindigkeit,
+                        d_kunde_id: tempDKunde.d_kunde_id,
+                        messung_erzeugt: payload.zeit,
+                        messung_eingetroffen: msg.erstellt_am,
+                        geschwindigkeit: payload.geschwindigkeit,
                     });
-
                 } else {
-                    console.error("ort_id is not in db: ", messungOrt);
+                    console.error(
+                        "kunde_id is not in db: ",
+                        tempFahrzeug.kunde_id
+                    );
                 }
             } else {
-                console.error("kunde_id is not in db: ", tempFahrzeug.kunde_id);
+                console.error("ort_id is not in db: ", payload.ort);
             }
         } else {
-            console.error("fin is not in db: ", fin);
+            console.error("fin is not in db: ", payload.fin);
         }
     });
 
