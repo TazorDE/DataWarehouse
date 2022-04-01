@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 // set up postgres database
-const { Client } = require("pg");
+const { Client, Pool } = require("pg");
 
 if (!String.prototype.trim) {
     String.prototype.trim = function () {
@@ -28,11 +28,6 @@ async function generateStartValues() {
     let d_ort_id_start = 0;
     let d_fahrzeug_id_start = 0;
 
-    // check entries for existing ids and load the highest id+1 as a new start value
-    let client = new Client(conString);
-    client.connect();
-
-    await client.end();
     return {
         d_kunde_id_start,
         d_ort_id_start,
@@ -42,8 +37,8 @@ async function generateStartValues() {
 
 // extract data from staging
 async function extract() {
-    let pgClient = new Client(conString);
-    pgClient.connect();
+    const pgClient = new Client(conString);
+    await pgClient.connect();
 
     // extract data from messung
     let messung = await pgClient.query(`
@@ -119,8 +114,8 @@ async function extract() {
         FROM
             staging.hersteller
     `);
-
     await pgClient.end();
+
     return {
         messung: messung.rows,
         land: land.rows,
@@ -132,7 +127,7 @@ async function extract() {
     };
 }
 
-async function transform() {
+async function transform(pgClient) {
     let data = await extract();
     // console.log(data);
     // welche Daten brauchen wir von den ausgelesenen?
@@ -286,15 +281,13 @@ async function transform() {
     return returnData;
 }
 async function load() {
+    const pgClient = new Client(conString);
+
     let martData = await transform();
 
-    // Neue Daten in Mart laden
-
-    // create pgClient
-    const pgClient = new Client(conString);
     await pgClient.connect();
-
-    martData.kunde.forEach((res) => {
+    // Neue Daten in Mart laden
+    martData.kunde.forEach(async (res) => {
         // insert into d_kunde
         let sql = `INSERT INTO d_kunde (d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
         let values = [
@@ -308,17 +301,17 @@ async function load() {
             res.ort,
             res.land,
         ];
-        pgClient.query(sql, values);
+        await pgClient.query(sql, values);
     });
 
-    martData.ort.forEach((res) => {
+    martData.ort.forEach(async (res) => {
         // insert into d_ort
         let sql = `INSERT INTO d_ort (d_ort_id, ort, land) VALUES ($1, $2, $3)`;
         let values = [res.d_ort_id, res.ort, res.land];
-        pgClient.query(sql, values);
+        await pgClient.query(sql, values);
     });
 
-    martData.fahrzeug.forEach((res) => {
+    martData.fahrzeug.forEach(async (res) => {
         // insert into d_fahrzeug
         let sql = `INSERT INTO d_fahrzeug (d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
         let values = [
@@ -329,10 +322,10 @@ async function load() {
             res.kfz_kennzeichen,
             res.hersteller,
         ];
-        pgClient.query(sql, values);
+        await pgClient.query(sql, values);
     });
 
-    martData.messung.forEach((res) => {
+    martData.messung.forEach(async (res) => {
         // insert into f_messung
         let sql = `INSERT INTO f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
         let values = [
@@ -343,10 +336,9 @@ async function load() {
             res.messung_eingetroffen,
             res.geschwindigkeit,
         ];
-        pgClient.query(sql, values);
+        await pgClient.query(sql, values);
     });
-
-    // close pgClient
+    
     await pgClient.end();
 }
 
