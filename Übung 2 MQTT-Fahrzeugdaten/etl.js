@@ -271,7 +271,7 @@ async function load() {
 
     let martData = await transform();
 
-    await pgPool.connect((err, client, done) => {
+    pgPool.connect((err, client, done) => {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
@@ -287,14 +287,24 @@ async function load() {
                 res.ort,
                 res.land,
             ];
-            await client.query(sql, values);
+            await client.query(sql, values, (error, result) => {
+                client.release();
+                if (error) {
+                    console.error(error.stack);
+                }
+            });
         });
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
             let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2)`;
             let values = [res.ort, res.land];
-            await client.query(sql, values);
+            await client.query(sql, values, (error, result) => {
+                client.release();
+                if (error) {
+                    console.error(error.stack);
+                }
+            });
         });
 
         martData.fahrzeug.forEach(async (res) => {
@@ -307,7 +317,12 @@ async function load() {
                 res.kfz_kennzeichen,
                 res.hersteller,
             ];
-            await client.query(sql, values);
+            await client.query(sql, values, (error, result) => {
+                client.release();
+                if (error) {
+                    console.error(error.stack);
+                }
+            });
         });
 
         // martData.messung.forEach(async (res) => {
@@ -323,36 +338,33 @@ async function load() {
         //     ];
         //     await client.query(sql, values);
         // });
-        client.release();
-    });
-    console.log("Mart data uploaded");
-    await pgPool.end();
-}
-
-async function build_messung() {
-    const pgPool = new Pool({
-        host: "localhost",
-        user: dbUser,
-        password: dbPassword,
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-    });
-
-    await pgPool.connect(async (err, client, done) => {
-
         // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
         let sql = `SELECT * FROM mart.d_kunde;`;
-        let currentKunden = await client.query(sql);
+        let currentKunden = await client.query(sql,[], (error, result) => {
+            client.release();
+            if (error) {
+                console.error(error.stack);
+            }
+        });
         sql = `SELECT * FROM mart.d_ort;`;
-        let currentOrte = await client.query(sql);
+        let currentOrte = await client.query(sql,[], (error, result) => {
+            client.release();
+            if (error) {
+                console.error(error.stack);
+            }
+        });
         sql = `SELECT * FROM mart.d_fahrzeug;`;
-        let currentFahrzeuge = await client.query(sql);
+        let currentFahrzeuge = await client.query(sql,[], (error, result) => {
+            client.release();
+            if (error) {
+                console.error(error.stack);
+            }
+        });
 
         console.log(currentKunden.rows);
-        done();
-    });
 
+    });
+    console.log("Mart data uploaded");
     await pgPool.end();
 }
 
