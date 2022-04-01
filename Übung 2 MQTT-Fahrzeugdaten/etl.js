@@ -296,7 +296,7 @@ async function load() {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
-            let sql = `INSERT INTO d_kunde (d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+            let sql = `INSERT INTO mart.d_kunde (d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
             let values = [
                 res.d_kunde_id,
                 res.kunde_id,
@@ -313,14 +313,14 @@ async function load() {
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
-            let sql = `INSERT INTO d_ort (d_ort_id, ort, land) VALUES ($1, $2, $3)`;
+            let sql = `INSERT INTO mart.d_ort (d_ort_id, ort, land) VALUES ($1, $2, $3)`;
             let values = [res.d_ort_id, res.ort, res.land];
             await client.query(sql, values);
         });
 
         martData.fahrzeug.forEach(async (res) => {
             // insert into d_fahrzeug
-            let sql = `INSERT INTO d_fahrzeug (d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
+            let sql = `INSERT INTO mart.d_fahrzeug (d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
             let values = [
                 res.d_fahrzeug_id,
                 res.fin,
@@ -334,7 +334,7 @@ async function load() {
 
         martData.messung.forEach(async (res) => {
             // insert into f_messung
-            let sql = `INSERT INTO f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
+            let sql = `INSERT INTO mart.f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
             let values = [
                 res.d_fahrzeug_id,
                 res.d_ort_id,
