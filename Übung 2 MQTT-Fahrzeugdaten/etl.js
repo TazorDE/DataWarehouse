@@ -15,25 +15,8 @@ let dbUser = process.env.DB_USER;
 let dbPassword = process.env.DB_PASSWORD;
 const conString = `postgres://${dbUser}:${dbPassword}@localhost:5432/postgres`;
 
-let d_kunde_id_start;
-let d_ort_id_start;
-let d_fahrzeug_id_start;
-
 // Tables in staging: messung, land, ort, kfzzuordnung, kunde, fahrzeug, hersteller
 // Tables in mart: d_kunde, f_fzg_messung, d_fahrzeug, d_ort
-
-async function generateStartValues() {
-    // create d/f_id start values
-    let d_kunde_id_start = 0;
-    let d_ort_id_start = 0;
-    let d_fahrzeug_id_start = 0;
-
-    return {
-        d_kunde_id_start,
-        d_ort_id_start,
-        d_fahrzeug_id_start,
-    };
-}
 
 // extract data from staging
 async function extract() {
@@ -297,9 +280,8 @@ async function load() {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
-            let sql = `INSERT INTO mart.d_kunde (d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+            let sql = `INSERT INTO mart.d_kunde (kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
             let values = [
-                res.d_kunde_id,
                 res.kunde_id,
                 res.vorname,
                 res.nachname,
@@ -314,16 +296,15 @@ async function load() {
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
-            let sql = `INSERT INTO mart.d_ort (d_ort_id, ort, land) VALUES ($1, $2, $3)`;
-            let values = [res.d_ort_id, res.ort, res.land];
+            let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2, $3)`;
+            let values = [res.ort, res.land];
             await client.query(sql, values);
         });
 
         martData.fahrzeug.forEach(async (res) => {
             // insert into d_fahrzeug
-            let sql = `INSERT INTO mart.d_fahrzeug (d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
+            let sql = `INSERT INTO mart.d_fahrzeug (fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
             let values = [
-                res.d_fahrzeug_id,
                 res.fin,
                 res.baujahr,
                 res.modell,
@@ -352,11 +333,6 @@ async function load() {
 }
 
 async function startSys() {
-    let startValues = await generateStartValues();
-    d_kunde_id_start = startValues.d_kunde_id_start;
-    d_ort_id_start = startValues.d_ort_id_start;
-    d_fahrzeug_id_start = startValues.d_fahrzeug_id_start;
-
     load();
 }
 startSys();
