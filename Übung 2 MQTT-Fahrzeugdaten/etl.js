@@ -271,7 +271,7 @@ async function load() {
 
     let martData = await transform();
 
-    pgPool.connect((err, client, done) => {
+    pgPool.connect(async (err, client, done) => {
         // Neue Daten in Mart laden
         martData.kunde.forEach(async (res) => {
             // insert into d_kunde
