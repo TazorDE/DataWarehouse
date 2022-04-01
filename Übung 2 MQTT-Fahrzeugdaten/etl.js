@@ -287,8 +287,67 @@ async function transform() {
 }
 async function load() {
     let martData = await transform();
-    console.log(martData);
+
     // Neue Daten in Mart laden
+
+    // create pgClient
+    const pgClient = new Client(conString);
+    await pgClient.connect();
+
+    martData.kunde.forEach((res) => {
+        // insert into d_kunde
+        let sql = `INSERT INTO d_kunde (d_kunde_id, kunde_id, vorname, nachname, anrede, geschlecht, geburtsdatum, ort, land) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+        let values = [
+            res.d_kunde_id,
+            res.kunde_id,
+            res.vorname,
+            res.nachname,
+            res.anrede,
+            res.geschlecht,
+            res.geburtsdatum,
+            res.ort,
+            res.land,
+        ];
+        pgClient.query(sql, values);
+    });
+
+    martData.ort.forEach((res) => {
+        // insert into d_ort
+        let sql = `INSERT INTO d_ort (d_ort_id, ort, land) VALUES ($1, $2, $3)`;
+        let values = [res.d_ort_id, res.ort, res.land];
+        pgClient.query(sql, values);
+    });
+
+    martData.fahrzeug.forEach((res) => {
+        // insert into d_fahrzeug
+        let sql = `INSERT INTO d_fahrzeug (d_fahrzeug_id, fin, baujahr, modell, kfz_kennzeichen, hersteller) VALUES ($1, $2, $3, $4, $5, $6)`;
+        let values = [
+            res.d_fahrzeug_id,
+            res.fin,
+            res.baujahr,
+            res.modell,
+            res.kfz_kennzeichen,
+            res.hersteller,
+        ];
+        pgClient.query(sql, values);
+    });
+
+    martData.messung.forEach((res) => {
+        // insert into f_messung
+        let sql = `INSERT INTO f_messung (d_fahrzeug_id, d_ort_id, d_kunde_id, messung_erzeugt, messung_eingetroffen, geschwindigkeit) VALUES ($1, $2, $3, $4, $5, $6)`;
+        let values = [
+            res.d_fahrzeug_id,
+            res.d_ort_id,
+            res.d_kunde_id,
+            res.messung_erzeugt,
+            res.messung_eingetroffen,
+            res.geschwindigkeit,
+        ];
+        pgClient.query(sql, values);
+    });
+
+    // close pgClient
+    await pgClient.end();
 }
 
 async function startSys() {
