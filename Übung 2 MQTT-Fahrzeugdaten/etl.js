@@ -261,13 +261,13 @@ async function transform(pgClient) {
 }
 async function load() {
     const pgPool = new Pool({
-        host: 'localhost',
+        host: "localhost",
         user: dbUser,
         password: dbPassword,
         max: 20,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000,
-      })
+    });
 
     let martData = await transform();
 
@@ -287,17 +287,14 @@ async function load() {
                 res.ort,
                 res.land,
             ];
-            let queryRes = await client.query(sql, values);
-            console.log('kunde', queryRes);
-
+            await client.query(sql, values);
         });
 
         martData.ort.forEach(async (res) => {
             // insert into d_ort
             let sql = `INSERT INTO mart.d_ort (ort, land) VALUES ($1, $2)`;
             let values = [res.ort, res.land];
-            let queryRes = await client.query(sql, values);
-            console.log('ort: ',queryRes);
+            await client.query(sql, values);
         });
 
         martData.fahrzeug.forEach(async (res) => {
@@ -310,9 +307,7 @@ async function load() {
                 res.kfz_kennzeichen,
                 res.hersteller,
             ];
-            let queryRes = await client.query(sql, values);
-            console.log('fahrzeug: ',queryRes);
-
+            await client.query(sql, values);
         });
 
         // martData.messung.forEach(async (res) => {
@@ -328,12 +323,36 @@ async function load() {
         //     ];
         //     await client.query(sql, values);
         // });
+        done();
     });
 
     await pgPool.end();
 }
 
+async function build_messung() {
+    const pgPool = new Pool({
+        host: "localhost",
+        user: dbUser,
+        password: dbPassword,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+    });
+
+    // get all data from mart.d_kunde, mart.d_ort, mart.d_fahrzeug
+    let sql = `SELECT * FROM mart.d_kunde;`;
+    let currentKunden = await pgPool.query(sql);
+    sql = `SELECT * FROM mart.d_ort;`;
+    let currentOrte = await pgPool.query(sql);
+    sql = `SELECT * FROM mart.d_fahrzeug;`;
+    let currentFahrzeuge = await pgPool.query(sql);
+
+    console.log(currentKunden.rows);
+
+    await pgPool.end();
+}
+
 async function startSys() {
-    load();
+    await load();
 }
 startSys();
