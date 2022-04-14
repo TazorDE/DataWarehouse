@@ -5,8 +5,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Warehouse</title>
+
+    <script src="https://cdn.plot.ly/plotly-2.11.1.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/darkly/bootstrap.min.css" integrity="sha384-nNK9n28pDUDDgIiIqZ/MiyO3F4/9vsMtReZK39klb/MtkZI3/LtjSjlmyVPS3KdN" crossorigin="anonymous">
 </head>
 <body>
-    
+    <div id="plot" style="width:900px;height:500px;"></div>
+
+    <script type="text/javascript">
+        var data = [<%- JSON.stringify(renderingData) %>];
+        var layout = {
+            title: 'Durchschnittliche Geschwindigkeit zu Zeit'
+        };
+        Plotly.newPlot('plot', data, layout);
+    </script>
 </body>
 </html>
