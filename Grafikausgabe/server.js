@@ -26,7 +26,7 @@ async function getData() {
     await pgClient.connect();
 
     // get data from postgres
-    let result_f_fzg_messung = await pgClient.query('SELECT * FROM mart.d_kunde');
+    let result_f_fzg_messung = await pgClient.query('SELECT * FROM mart.f_fzg_messung');
     //console.log(result_f_fzg_messung.rows);
     
     //'Morning', 'Afternoon', 'Evening'
